@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clicking Simulator</title>
+    <link rel="stylesheet" href="main.css">
+    <style>
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 1000;
+        }
+        #progress-container {
+            width: 100%;
+            height: 10px;
+            background: #ccc;
+            cursor: pointer;
+        }
+        #progress-bar {
+            width: 0;
+            height: 100%;
+            background: #38a169;
+            transition: width 0.1s;
+        }
+        .click-area {
+            transition: background-color 0.3s, border-radius 0.3s;
+        }
+        .click-area-default { background: #4a90e2; }
+        .click-area-red { background: #e53e3e; }
+        .click-area-blue { background: #3182ce; }
+        .click-area-green { background: #38a169; }
+        .click-area-circle { border-radius: 50%; }
+        .click-area-square { border-radius: 0; }
+        .dark { background: #1a202c; color: #e2e8f0; }
+        .light { background: #f7fafc; color: #2d3748; }
+        .blue { background: #ebf8ff; color: #2b6cb0; }
+        .green { background: #f0fff4; color: #276749; }
+        .purple { background: #faf5ff; color: #553c9a; }
+        .neon { background: #000; color: #00ff00; }
+    </style>
+</head>
+<body>
+    <div id="notification"></div>
+    <audio id="audio-player" src="pixel_fight.mp3"></audio>
+    <audio id="click-sound" src="click.mp3"></audio>
+    <audio id="purchase-sound" src="purchase.mp3"></audio>
+    <div class="login-container" id="login-container">
+        <div class="login-box" id="login-box">
+            <h2>Clicking Simulator</h2>
+            <div class="login-input">
+                <input type="text" id="username" placeholder="Username" required maxlength="20">
+            </div>
+            <div class="login-input">
+                <input type="password" id="password" placeholder="Password" required maxlength="20">
+            </div>
+            <div class="login-buttons">
+                <button type="button" id="login-btn" aria-label="Log in to the game">Login</button>
+                <button type="button" id="register-btn" aria-label="Register a new account">Register</button>
+            </div>
+            <div class="error-message" id="error-message"></div>
+        </div>
+        <div class="guest-mode" id="guest-mode">
+            <h2>Guest Mode</h2>
+            <p class="guest-username-display" id="guest-username-display">Play as Guest: Anonymous</p>
+            <p class="guest-message">Playing as guest. Data will not be saved and will be deleted when you leave.</p>
+            <div class="login-input">
+                <input type="text" id="guest-username" placeholder="Temporary Username" maxlength="20">
+            </div>
+            <div class="login-buttons">
+                <button type="button" id="confirm-guest-btn" aria-label="Confirm guest mode">Confirm as Anonymous</button>
+                <button type="button" id="leave-guest-btn" aria-label="Leave guest mode">Leave Guest Mode</button>
+            </div>
+        </div>
+        <button type="button" class="guest-button" id="guest-btn" aria-label="Play as a guest without logging in">Play as Guest</button>
+    </div>
+
+    <div class="game-container" id="game-container">
+        <div class="sidebar">
+            <div class="header">Stats</div>
+            <div class="stats">
+                <div class="stat"><span>Total Clicks:</span><span id="total-clicks">0</span></div>
+                <div class="stat"><span>Clicks per Second:</span><span id="cps">0</span></div>
+                <div class="stat"><span>Manual Click Power:</span><span id="click-power">1</span></div>
+                <div class="stat"><span>Manual Click Multiplier:</span><span id="click-multiplier">1x</span></div>
+                <div class="stat"><span>Auto Clickers:</span><span id="auto-clickers">0</span></div>
+                <div class="stat"><span>Global Multiplier:</span><span id="global-multiplier">1x</span></div>
+                <div class="stat"><span>Rebirth Multiplier:</span><span id="rebirth-multiplier">1x</span></div>
+                <div class="stat"><span>Prestige Multiplier:</span><span id="prestige-multiplier">1x</span></div>
+                <div class="stat"><span>Rebirths:</span><span id="rebirth-count">0</span></div>
+                <div class="stat"><span>Prestiges:</span><span id="prestige-count">0</span></div>
+                <div class="stat"><span>Total Earned:</span><span id="total-earned">0</span></div>
+                <div class="stat"><span>Total Spent:</span><span id="total-spent">0</span></div>
+                <div class="stat"><span>Play Time:</span><span id="play-time">00:00:00</span></div>
+            </div>
+            <div class="daily-rewards">
+                <div class="header">Daily Rewards</div>
+                <p id="daily-reward-status">Login daily for rewards!</p>
+            </div>
+            <div class="rebirth-panel">
+                <div class="header">Rebirth</div>
+                <p id="rebirth-info">Reset progress for a multiplier and bonus clicks!</p>
+                <button class="rebirth-btn" id="rebirth-btn" disabled aria-label="Perform rebirth reset">Rebirth</button>
+            </div>
+            <div class="prestige-panel">
+                <div class="header">Prestige</div>
+                <p id="prestige-info">Ultimate reset for huge rewards and auto-click boost!</p>
+                <button class="prestige-btn" id="prestige-btn" disabled aria-label="Perform prestige reset">Prestige</button>
+            </div>
+            <div class="music-player">
+                <div class="header">Music Player</div>
+                <div>
+                    <div>Now Playing: <span id="track-name">Pixel Fight</span></div>
+                    <div class="music-controls">
+                        <button id="play-btn" aria-label="Play music">Play</button>
+                        <button id="stop-btn" aria-label="Stop music">Stop</button>
+                        <input type="file" id="music-file" accept="audio/*" style="display: none;">
+                        <button id="import-btn" aria-label="Import music file">Import Music</button>
+                    </div>
+                    <div class="progress-container" id="progress-container">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <div class="music-time">
+                        <span id="current-time">0:00</span>
+                        <span id="duration">0:00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-panel">
+                <div class="header">Settings</div>
+                <div class="setting">
+                    <span>Theme:</span>
+                    <button id="theme-toggle" aria-label="Cycle to the next theme">Next Theme</button>
+                </div>
+                <div class="setting fraught with danger">
+                    <span>Sound Effects:</span>
+                    <input type="checkbox" id="sound-toggle" checked>
+                </div>
+                <div class="setting">
+                    <span>Click Area Color:</span>
+                    <select id="click-area-color">
+                        <option value="default">Default</option>
+                        <option value="red">Red</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                    </select>
+                </div>
+                <div class="setting">
+                    <span>Click Area Shape:</span>
+                    <select id="click-area-shape">
+                        <option value="circle">Circle</option>
+                        <option value="square">Square</option>
+                    </select>
+                </div>
+                <div class="setting">
+                    <span>Save Guest Progress:</span>
+                    <button id="save-guest-btn" aria-label="Save guest progress">Save</button>
+                </div>
+                <div class="setting">
+                    <span>Load Guest Progress:</span>
+                    <button id="load-guest-btn" aria-label="Load guest progress">Load</button>
+                </div>
+            </div>
+            <button class="quit-btn" id="quit-btn" aria-label="Quit the game">Quit</button>
+        </div>
+        <div class="main-content">
+            <h1>Clicking Simulator</h1>
+            <div id="click-count" class="click-count">0</div>
+            <div id="cps-display" class="cps">0 per second</div>
+            <div class="click-area" id="click-button">CLICK ME</div>
+            <div class="tabs">
+                <div class="tab active" data-tab="upgrades">Upgrades</div>
+                <div class="tab" data-tab="autoclickers">Auto Clickers</div>
+                <div class="tab" data-tab="multipliers">Multipliers</div>
+                <div class="tab" data-tab="rebirth">Rebirth</div>
+                <div class="tab" data-tab="prestige">Prestige</div>
+                <div class="tab" data-tab="cheats">Cheats</div>
+            </div>
+            <div class="tab-content active" id="upgrades">
+                <div class="section">
+                    <div class="header">Click Upgrades</div>
+                    <div id="click-upgrades"></div>
+                </div>
+            </div>
+            <div class="tab-content" id="autoclickers">
+                <div class="section">
+                    <div class="header">Auto Clickers</div>
+                    <div id="auto-upgrades"></div>
+                </div>
+            </div>
+            <div class="tab-content" id="multipliers">
+                <div class="section">
+                    <div class="header">Click Multipliers</div>
+                    <div id="click-multiplier-upgrades"></div>
+                </div>
+                <div class="section">
+                    <div class="header">Global Multipliers</div>
+                    <div id="global-multiplier-upgrades"></div>
+                </div>
+            </div>
+            <div class="tab-content" id="rebirth">
+                <div class="section">
+                    <div class="header">Rebirth</div>
+                    <p>Reset your progress for a multiplier boost and bonus clicks! Requires 5,000 clicks.</p>
+                    <p>Current Rebirth Multiplier: <span id="rebirth-tab-multiplier">1x</span></p>
+                    <button class="rebirth-btn" id="rebirth-tab-btn" disabled aria-label="Perform rebirth reset from tab">Rebirth Now</button>
+                </div>
+            </div>
+            <div class="tab-content" id="prestige">
+                <div class="section">
+                    <div class="header">Prestige</div>
+                    <p>Perform an ultimate reset for a massive multiplier and auto-click boost! Requires 5 rebirths.</p>
+                    <p>Current Prestige Multiplier: <span id="prestige-tab-multiplier">1x</span></p>
+                    <button class="prestige-btn" id="prestige-tab-btn" disabled aria-label="Perform prestige reset from tab">Prestige Now</button>
+                </div>
+            </div>
+            <div class="tab-content" id="cheats">
+                <div class="section">
+                    <div class="header">Cheat Codes</div>
+                    <p>Enter a cheat code below:</p>
+                    <div class="cheat-input">
+                        <input type="text" id="cheat-code" placeholder="Enter cheat code..." maxlength="20">
+                        <button id="submit-cheat" aria-label="Submit cheat code">Submit</button>
+                    </div>
+                    <div id="cheat-result" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let gameState = {
+            username: '',
+            isGuest: false,
+            clicks: 0,
+            totalClicks: 0,
+            totalEarned: 0,
+            totalSpent: 0,
+            clickPower: 1,
+            clickMultiplier: 1,
+            autoClickers: 0,
+            autoClickerPower: 0,
+            globalMultiplier: 1,
+            rebirthCount: 0,
+            rebirthMultiplier: 1,
+            prestigeCount: 0,
+            prestigeMultiplier: 1,
+            prestigeAutoPower: 0,
+            startTime: Date.now(),
+            settings: {
+                soundEnabled: true,
+                theme: 'dark',
+                clickAreaStyle: { color: 'default', shape: 'circle' }
+            }
+        };
+
+        const themes = ['dark', 'light', 'blue', 'green', 'purple', 'neon'];
+        const clickUpgrades = [
+            { id: 'cu1', name: 'Stronger Finger', baseCost: 10, costMultiplier: 1.15, power: 1, owned: 0, description: 'Increases click power by 1' },
+            { id: 'cu2', name: 'Iron Finger', baseCost: 100, costMultiplier: 1.18, power: 5, owned: 0, description: 'Increases click power by 5' }
+        ];
+        const autoClickerUpgrades = [
+            { id: 'au1', name: 'Basic Auto Clicker', baseCost: 50, costMultiplier: 1.2, power: 0.1, owned: 0, description: 'Clicks 0.1 times per second' },
+            { id: 'au2', name: 'Advanced Auto Clicker', baseCost: 500, costMultiplier: 1.25, power: 0.5, owned: 0, description: 'Clicks 0.5 times per second' }
+        ];
+        const clickMultiplierUpgrades = [
+            { id: 'cm1', name: 'Click Booster', baseCost: 200, costMultiplier: 1.5, power: 2, owned: 0, description: 'Sets click multiplier to 2x', max: 1 },
+            { id: 'cm2', name: 'Click Amplifier', baseCost: 2000, costMultiplier: 1.6, power: 5, owned: 0, description: 'Sets click multiplier to 5x', max: 1 }
+        ];
+        const globalMultiplierUpgrades = [
+            { id: 'gm1', name: 'Global Efficiency', baseCost: 1000, costMultiplier: 2, power: 2, owned: 0, description: 'Doubles all clicks' },
+            { id: 'gm2', name: 'Master Optimization', baseCost: 10000, costMultiplier: 2.5, power: 2, owned: 0, description: 'Doubles all clicks again' }
+        ];
+        const validCheatCodes = ['BOOST', 'POWERUP', 'MEGACLICK'];
+
+        const dom = {
+            loginBtn: document.getElementById('login-btn'),
+            registerBtn: document.getElementById('register-btn'),
+            guestBtn: document.getElementById('guest-btn'),
+            leaveGuestBtn: document.getElementById('leave-guest-btn'),
+            confirmGuestBtn: document.getElementById('confirm-guest-btn'),
+            errorMessage: document.getElementById('error-message'),
+            loginBox: document.getElementById('login-box'),
+            guestMode: document.getElementById('guest-mode'),
+            guestUsername: document.getElementById('guest-username'),
+            guestUsernameDisplay: document.getElementById('guest-username-display'),
+            loginContainer: document.getElementById('login-container'),
+            gameContainer: document.getElementById('game-container'),
+            clickButton: document.getElementById('click-button'),
+            clickCount: document.getElementById('click-count'),
+            cpsDisplay: document.getElementById('cps-display'),
+            totalClicks: document.getElementById('total-clicks'),
+            cps: document.getElementById('cps'),
+            clickPower: document.getElementById('click-power'),
+            clickMultiplier: document.getElementById('click-multiplier'),
+            autoClickers: document.getElementById('auto-clickers'),
+            globalMultiplier: document.getElementById('global-multiplier'),
+            rebirthMultiplier: document.getElementById('rebirth-multiplier'),
+            prestigeMultiplier: document.getElementById('prestige-multiplier'),
+            rebirthCount: document.getElementById('rebirth-count'),
+            prestigeCount: document.getElementById('prestige-count'),
+            totalEarned: document.getElementById('total-earned'),
+            totalSpent: document.getElementById('total-spent'),
+            playTime: document.getElementById('play-time'),
+            cheatCode: document.getElementById('cheat-code'),
+            submitCheat: document.getElementById('submit-cheat'),
+            cheatResult: document.getElementById('cheat-result'),
+            notification: document.getElementById('notification'),
+            audioPlayer: document.getElementById('audio-player'),
+            clickSound: document.getElementById('click-sound'),
+            purchaseSound: document.getElementById('purchase-sound'),
+            playBtn: document.getElementById('play-btn'),
+            stopBtn: document.getElementById('stop-btn'),
+            importBtn: document.getElementById('import-btn'),
+            musicFile: document.getElementById('music-file'),
+            trackName: document.getElementById('track-name'),
+            progressBar: document.getElementById('progress-bar'),
+            progressContainer: document.getElementById('progress-container'),
+            currentTime: document.getElementById('current-time'),
+            duration: document.getElementById('duration'),
+            tabs: document.querySelectorAll('.tab'),
+            tabContents: document.querySelectorAll('.tab-content'),
+            quitBtn: document.getElementById('quit-btn'),
+            clickUpgrades: document.getElementById('click-upgrades'),
+            autoUpgrades: document.getElementById('auto-upgrades'),
+            clickMultiplierUpgrades: document.getElementById('click-multiplier-upgrades'),
+            globalMultiplierUpgrades: document.getElementById('global-multiplier-upgrades'),
+            themeToggle: document.getElementById('theme-toggle'),
+            soundToggle: document.getElementById('sound-toggle'),
+            saveGuestBtn: document.getElementById('save-guest-btn'),
+            loadGuestBtn: document.getElementById('load-guest-btn'),
+            dailyRewardStatus: document.getElementById('daily-reward-status'),
+            clickAreaColor: document.getElementById('click-area-color'),
+            clickAreaShape: document.getElementById('click-area-shape'),
+            rebirthBtn: document.getElementById('rebirth-btn'),
+            prestigeBtn: document.getElementById('prestige-btn'),
+            rebirthInfo: document.getElementById('rebirth-info'),
+            prestigeInfo: document.getElementById('prestige-info'),
+            rebirthTabBtn: document.getElementById('rebirth-tab-btn'),
+            prestigeTabBtn: document.getElementById('prestige-tab-btn'),
+            rebirthTabMultiplier: document.getElementById('rebirth-tab-multiplier'),
+            prestigeTabMultiplier: document.getElementById('prestige-tab-multiplier')
+        };
+
+        // Security: MutationObserver for script changes
+        let lastGameStateHash = '';
+        const observer = new MutationObserver((mutations) => {
+            if (gameState.username !== 'RaceyRiley') {
+                mutations.forEach(mutation => {
+                    if (mutation.target.tagName === 'SCRIPT') {
+                        showNotification('Unauthorized script modification detected!', false);
+                        resetGame();
+                    }
+                });
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Security: Game state hashing
+        function computeGameStateHash() {
+            const stateCopy = { ...gameState, startTime: 0 }; // Exclude volatile fields
+            return JSON.stringify(stateCopy).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
+        }
+
+        function checkGameStateIntegrity() {
+            if (gameState.username !== 'RaceyRiley') {
+                const currentHash = computeGameStateHash();
+                if (lastGameStateHash && lastGameStateHash !== currentHash) {
+                    showNotification('Unauthorized game state modification detected!', false);
+                    resetGame();
+                }
+                lastGameStateHash = currentHash;
+            }
+        }
+
+        function resetGame() {
+            gameState = {
+                username: gameState.username,
+                isGuest: gameState.isGuest,
+                clicks: 0,
+                totalClicks: 0,
+                totalEarned: 0,
+                totalSpent: 0,
+                clickPower: 1,
+                clickMultiplier: 1,
+                autoClickers: 0,
+                autoClickerPower: 0,
+                globalMultiplier: 1,
+                rebirthCount: 0,
+                rebirthMultiplier: 1,
+                prestigeCount: 0,
+                prestigeMultiplier: 1,
+                prestigeAutoPower: 0,
+                startTime: Date.now(),
+                settings: {
+                    soundEnabled: true,
+                    theme: 'dark',
+                    clickAreaStyle: { color: 'default', shape: 'circle' }
+                }
+            };
+            renderUI();
+            updateDisplays();
+        }
+
+        setInterval(checkGameStateIntegrity, 1000);
+
+        function updateButtonAccessibility(button, isDisabled) {
+            button.disabled = isDisabled;
+            button.setAttribute('aria-disabled', isDisabled);
+        }
+
+        function formatNumber(num) {
+            if (num < 1000) return Math.floor(num);
+            const units = ['K', 'M', 'B', 'T', 'Q'];
+            const unit = Math.floor((Math.log10(num) - 3) / 3);
+            if (unit >= units.length) return Math.floor(num).toExponential(2);
+            const divisor = Math.pow(10, unit * 3 + 3);
+            return (Math.floor(num * 10 / divisor) / 10).toFixed(1) + units[unit];
+        }
+
+        function calculateUpgradeCost(upgrade) {
+            return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, upgrade.owned));
+        }
+
+        function showNotification(message, isSuccess = true) {
+            dom.notification.textContent = message;
+            dom.notification.style.backgroundColor = isSuccess ? '#38a169' : '#e53e3e';
+            dom.notification.style.opacity = '1';
+            setTimeout(() => dom.notification.style.opacity = '0', 3000);
+        }
+
+        function renderUI(section = 'all') {
+            const upgradeTypes = [
+                { list: clickUpgrades, container: dom.clickUpgrades, type: 'click' },
+                { list: autoClickerUpgrades, container: dom.autoUpgrades, type: 'auto' },
+                { list: clickMultiplierUpgrades, container: dom.clickMultiplierUpgrades, type: 'clickMultiplier' },
+                { list: globalMultiplierUpgrades, container: dom.globalMultiplierUpgrades, type: 'globalMultiplier' }
+            ];
+
+            if (section === 'all' || section === 'upgrades') {
+                upgradeTypes.forEach(({ list, container, type }) => {
+                    container.innerHTML = '';
+                    list.forEach(upgrade => {
+                        const cost = calculateUpgradeCost(upgrade);
+                        const isDisabled = gameState.clicks < cost || (upgrade.max && upgrade.owned >= upgrade.max);
+                        const element = document.createElement('div');
+                        element.className = `upgrade ${isDisabled ? 'disabled' : ''}`;
+                        element.dataset.id = upgrade.id;
+                        element.innerHTML = `
+                            <div class="upgrade-info">
+                                <div class="upgrade-name">${upgrade.name} (${upgrade.owned})</div>
+                                <div class="upgrade-desc">${upgrade.description}</div>
+                            </div>
+                            <div class="upgrade-cost">${formatNumber(cost)} clicks</div>
+                        `;
+                        element.addEventListener('click', () => purchaseUpgrade(type, upgrade.id));
+                        container.appendChild(element);
+                    });
+                });
+            }
+
+            dom.rebirthInfo.textContent = `Reset progress for a ${gameState.rebirthMultiplier.toFixed(1)}x multiplier! Requires 5,000 clicks.`;
+            dom.prestigeInfo.textContent = `Ultimate reset for a ${gameState.prestigeMultiplier.toFixed(1)}x multiplier and auto-click boost! Requires 5 rebirths.`;
+            dom.rebirthTabMultiplier.textContent = `${gameState.rebirthMultiplier.toFixed(1)}x`;
+            dom.prestigeTabMultiplier.textContent = `${gameState.prestigeMultiplier.toFixed(1)}x`;
+            updateButtonAccessibility(dom.rebirthBtn, gameState.clicks < 5000);
+            updateButtonAccessibility(dom.prestigeBtn, gameState.rebirthCount < 5);
+            updateButtonAccessibility(dom.rebirthTabBtn, gameState.clicks < 5000);
+            updateButtonAccessibility(dom.prestigeTabBtn, gameState.rebirthCount < 5);
+        }
+
+        function purchaseUpgrade(type, id) {
+            const upgrades = {
+                click: clickUpgrades,
+                auto: autoClickerUpgrades,
+                clickMultiplier: clickMultiplierUpgrades,
+                globalMultiplier: globalMultiplierUpgrades
+            }[type];
+            const upgrade = upgrades.find(u => u.id === id);
+            if (!upgrade) return;
+            const cost = calculateUpgradeCost(upgrade);
+            if (gameState.clicks < cost) return showNotification('Not enough clicks!', false);
+            if (upgrade.max && upgrade.owned >= upgrade.max) return showNotification('Max upgrades purchased!', false);
+            gameState.clicks -= cost;
+            gameState.totalSpent += cost;
+            upgrade.owned++;
+            if (gameState.settings.soundEnabled) dom.purchaseSound.play().catch(() => {});
+            if (type === 'click') {
+                gameState.clickPower += upgrade.power;
+            } else if (type === 'auto') {
+                gameState.autoClickers++;
+                gameState.autoClickerPower += upgrade.power;
+            } else if (type === 'clickMultiplier') {
+                gameState.clickMultiplier = upgrade.power;
+            } else if (type === 'globalMultiplier') {
+                gameState.globalMultiplier *= upgrade.power;
+            }
+            renderUI('upgrades');
+            updateDisplays();
+            showNotification(`Purchased ${upgrade.name}!`);
+        }
+
+        function performRebirth() {
+            if (gameState.clicks < 5000) return showNotification('Need 5,000 clicks for rebirth!', false);
+            gameState.rebirthCount++;
+            gameState.rebirthMultiplier += 0.5;
+            gameState.clicks = 0;
+            gameState.clickPower = 1;
+            gameState.autoClickers = 0;
+            gameState.autoClickerPower = 0;
+            gameState.clickMultiplier = 1;
+            gameState.globalMultiplier = 1;
+            clickUpgrades.forEach(u => u.owned = 0);
+            autoClickerUpgrades.forEach(u => u.owned = 0);
+            clickMultiplierUpgrades.forEach(u => u.owned = 0);
+            globalMultiplierUpgrades.forEach(u => u.owned = 0);
+            renderUI();
+            updateDisplays();
+            showNotification(`Rebirth complete! New multiplier: ${gameState.rebirthMultiplier.toFixed(1)}x`);
+        }
+
+        function performPrestige() {
+            if (gameState.rebirthCount < 5) return showNotification('Need 5 rebirths for prestige!', false);
+            gameState.prestigeCount++;
+            gameState.prestigeMultiplier += 1;
+            gameState.prestigeAutoPower += 1;
+            gameState.clicks = 0;
+            gameState.clickPower = 1;
+            gameState.autoClickers = 0;
+            gameState.autoClickerPower = 0;
+            gameState.clickMultiplier = 1;
+            gameState.globalMultiplier = 1;
+            gameState.rebirthCount = 0;
+            gameState.rebirthMultiplier = 1;
+            clickUpgrades.forEach(u => u.owned = 0);
+            autoClickerUpgrades.forEach(u => u.owned = 0);
+            clickMultiplierUpgrades.forEach(u => u.owned = 0);
+            globalMultiplierUpgrades.forEach(u => u.owned = 0);
+            renderUI();
+            updateDisplays();
+            showNotification(`Prestige complete! New multiplier: ${gameState.prestigeMultiplier.toFixed(1)}x, Auto Power: ${gameState.prestigeAutoPower}`);
+        }
+
+        function handleClick() {
+            const amount = addClicks(gameState.clickPower, true);
+            if (gameState.settings.soundEnabled) dom.clickSound.play().catch(() => {});
+        }
+
+        function addClicks(amount, isManual = false) {
+            const finalAmount = amount * (isManual ? gameState.clickMultiplier : 1) * gameState.globalMultiplier * gameState.rebirthMultiplier * gameState.prestigeMultiplier;
+            gameState.clicks += finalAmount;
+            gameState.totalClicks += finalAmount;
+            gameState.totalEarned += finalAmount;
+            updateDisplays();
+            return finalAmount;
+        }
+
+        function updateDisplays() {
+            dom.clickCount.textContent = formatNumber(gameState.clicks);
+            dom.totalClicks.textContent = formatNumber(gameState.totalClicks);
+            dom.cpsDisplay.textContent = formatNumber(calculateCPS()) + ' per second';
+            dom.cps.textContent = formatNumber(calculateCPS());
+            dom.clickPower.textContent = formatNumber(gameState.clickPower);
+            dom.clickMultiplier.textContent = gameState.clickMultiplier + 'x';
+            dom.autoClickers.textContent = formatNumber(gameState.autoClickers);
+            dom.globalMultiplier.textContent = gameState.globalMultiplier + 'x';
+            dom.rebirthMultiplier.textContent = gameState.rebirthMultiplier.toFixed(1) + 'x';
+            dom.prestigeMultiplier.textContent = gameState.prestigeMultiplier.toFixed(1) + 'x';
+            dom.rebirthCount.textContent = gameState.rebirthCount;
+            dom.prestigeCount.textContent = gameState.prestigeCount;
+            dom.totalEarned.textContent = formatNumber(gameState.totalEarned);
+            dom.totalSpent.textContent = formatNumber(gameState.totalSpent);
+            dom.playTime.textContent = formatTime(Date.now() - gameState.startTime);
+            dom.rebirthTabMultiplier.textContent = `${gameState.rebirthMultiplier.toFixed(1)}x`;
+            dom.prestigeTabMultiplier.textContent = `${gameState.prestigeMultiplier.toFixed(1)}x`;
+        }
+
+        function calculateCPS() {
+            return (gameState.autoClickerPower + gameState.prestigeAutoPower) * gameState.globalMultiplier * gameState.rebirthMultiplier * gameState.prestigeMultiplier;
+        }
+
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function autoClick() {
+            if (gameState.autoClickerPower > 0 || gameState.prestigeAutoPower > 0) {
+                addClicks(gameState.clickPower * (gameState.autoClickerPower + gameState.prestigeAutoPower));
+            }
+        }
+
+        function validateInput(input) {
+            return /^[a-zA-Z0-9]{3,20}$/.test(input);
+        }
+
+        function saveGuestProgress() {
+            if (gameState.isGuest) {
+                localStorage.setItem('guestProgress', JSON.stringify(gameState));
+                showNotification('Guest progress saved!');
+            } else {
+                showNotification('Only guest progress can be saved.', false);
+            }
+        }
+
+        function loadGuestProgress() {
+            if (gameState.isGuest) {
+                const saved = localStorage.getItem('guestProgress');
+                if (saved) {
+                    gameState = JSON.parse(saved);
+                    gameState.startTime = Date.now();
+                    renderUI();
+                    updateDisplays();
+                    showNotification('Guest progress loaded!');
+                } else {
+                    showNotification('No saved progress found.', false);
+                }
+            } else {
+                showNotification('Only guest progress can be loaded.', false);
+            }
+        }
+
+        function initGame() {
+            document.body.className = gameState.settings.theme;
+            dom.soundToggle.checked = gameState.settings.soundEnabled;
+            dom.clickAreaColor.value = gameState.settings.clickAreaStyle.color;
+            dom.clickAreaShape.value = gameState.settings.clickAreaStyle.shape;
+            dom.clickButton.className = `click-area click-area-${gameState.settings.clickAreaStyle.color} click-area-${gameState.settings.clickAreaStyle.shape}`;
+            renderUI();
+            updateDisplays();
+            lastGameStateHash = computeGameStateHash();
+            setInterval(updateDisplays, 1000);
+            setInterval(autoClick, 1000);
+        }
+
+        dom.clickButton.addEventListener('click', handleClick);
+        dom.loginBtn.addEventListener('click', () => {
+            const username = dom.username.value.trim();
+            const password = dom.password.value;
+            if (!validateInput(username) || !validateInput(password)) {
+                return dom.errorMessage.textContent = 'Username and password must be 3-20 alphanumeric characters.';
+            }
+            dom.loginContainer.style.display = 'none';
+            dom.gameContainer.style.display = 'flex';
+            gameState.username = username;
+            renderUI();
+            initGame();
+        });
+        dom.registerBtn.addEventListener('click', () => {
+            const username = dom.username.value.trim();
+            const password = dom.password.value;
+            if (!validateInput(username) || !validateInput(password)) {
+                return dom.errorMessage.textContent = 'Username and password must be 3-20 alphanumeric characters.';
+            }
+            dom.loginContainer.style.display = 'none';
+            dom.gameContainer.style.display = 'flex';
+            gameState.username = username;
+            renderUI();
+            initGame();
+        });
+        dom.guestBtn.addEventListener('click', () => {
+            dom.errorMessage.textContent = '';
+            dom.loginBox.style.display = 'none';
+            dom.guestMode.style.display = 'block';
+            dom.guestBtn.style.display = 'none';
+            gameState.isGuest = true;
+            gameState.username = '';
+            dom.guestUsername.value = '';
+            dom.guestUsername.disabled = false;
+            dom.confirmGuestBtn.style.display = 'block';
+            dom.guestUsernameDisplay.textContent = `Play as Guest: Anonymous`;
+            dom.confirmGuestBtn.textContent = `Confirm as Anonymous`;
+        });
+        dom.leaveGuestBtn.addEventListener('click', () => {
+            dom.guestMode.style.display = 'none';
+            dom.loginBox.style.display = 'block';
+            dom.guestBtn.style.display = 'block';
+            gameState.username = '';
+            dom.guestUsername.value = '';
+        });
+        dom.confirmGuestBtn.addEventListener('click', () => {
+            gameState.isGuest = true;
+            dom.guestUsername.disabled = true;
+            dom.guestMode.style.display = 'none';
+            dom.loginContainer.style.display = 'none';
+            dom.gameContainer.style.display = 'flex';
+            renderUI();
+            initGame();
+        });
+        dom.guestUsername.addEventListener('input', () => {
+            if (!gameState.isGuest || !dom.guestUsername.disabled) {
+                gameState.username = validateInput(dom.guestUsername.value.trim()) ? dom.guestUsername.value.trim() : '';
+                dom.guestUsernameDisplay.textContent = `Play as Guest: ${gameState.username || 'Anonymous'}`;
+                dom.confirmGuestBtn.textContent = `Confirm as ${gameState.username || 'Anonymous'}`;
+            }
+        });
+        dom.quitBtn.addEventListener('click', () => {
+            dom.loginContainer.style.display = 'flex';
+            dom.gameContainer.style.display = 'none';
+            dom.loginBox.style.display = 'block';
+            dom.guestMode.style.display = 'none';
+            dom.guestBtn.style.display = 'block';
+            dom.username.value = '';
+            dom.password.value = '';
+            dom.errorMessage.textContent = '';
+            gameState.username = '';
+            gameState.isGuest = false;
+        });
+        dom.themeToggle.addEventListener('click', () => {
+            const currentIndex = themes.indexOf(gameState.settings.theme);
+            gameState.settings.theme = themes[(currentIndex + 1) % themes.length];
+            document.body.className = gameState.settings.theme;
+        });
+        dom.soundToggle.addEventListener('change', () => {
+            gameState.settings.soundEnabled = dom.soundToggle.checked;
+        });
+        dom.clickAreaColor.addEventListener('change', () => {
+            gameState.settings.clickAreaStyle.color = dom.clickAreaColor.value;
+            dom.clickButton.className = `click-area click-area-${gameState.settings.clickAreaStyle.color} click-area-${gameState.settings.clickAreaStyle.shape}`;
+        });
+        dom.clickAreaShape.addEventListener('change', () => {
+            gameState.settings.clickAreaStyle.shape = dom.clickAreaShape.value;
+            dom.clickButton.className = `click-area click-area-${gameState.settings.clickAreaStyle.color} click-area-${gameState.settings.clickAreaStyle.shape}`;
+        });
+        dom.saveGuestBtn.addEventListener('click', saveGuestProgress);
+        dom.loadGuestBtn.addEventListener('click', loadGuestProgress);
+        dom.rebirthBtn.addEventListener('click', performRebirth);
+        dom.prestigeBtn.addEventListener('click', performPrestige);
+        dom.rebirthTabBtn.addEventListener('click', performRebirth);
+        dom.prestigeTabBtn.addEventListener('click', performPrestige);
+        dom.submitCheat.addEventListener('click', () => {
+            const code = dom.cheatCode.value.trim().toUpperCase();
+            if (!code || !validCheatCodes.includes(code)) {
+                dom.cheatResult.textContent = 'Invalid cheat code.';
+            } else {
+                dom.cheatResult.textContent = `Cheat ${code} applied!`;
+                if (code === 'BOOST') gameState.clicks += 1000;
+                else if (code === 'POWERUP') gameState.clickPower += 10;
+                else if (code === 'MEGACLICK') gameState.globalMultiplier *= 2;
+                updateDisplays();
+            }
+            dom.cheatCode.value = '';
+        });
+        dom.playBtn.addEventListener('click', () => {
+            if (dom.audioPlayer.src) {
+                dom.audioPlayer.play().catch(() => showNotification('Unable to play audio.', false));
+            } else {
+                showNotification('No audio file loaded.', false);
+            }
+        });
+        dom.stopBtn.addEventListener('click', () => {
+            dom.audioPlayer.pause();
+            dom.audioPlayer.currentTime = 0;
+        });
+        dom.importBtn.addEventListener('click', () => dom.musicFile.click());
+        dom.musicFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                dom.audioPlayer.src = URL.createObjectURL(file);
+                dom.trackName.textContent = file.name;
+            }
+        });
+        dom.audioPlayer.addEventListener('timeupdate', () => {
+            const current = dom.audioPlayer.currentTime;
+            const duration = dom.audioPlayer.duration || 0;
+            dom.currentTime.textContent = formatTime(Math.floor(current * 1000));
+            dom.duration.textContent = formatTime(Math.floor(duration * 1000));
+            dom.progressBar.style.width = duration ? (current / duration) * 100 + '%' : '0%';
+        });
+        dom.progressContainer.addEventListener('click', (event) => {
+            const rect = dom.progressContainer.getBoundingClientRect();
+            const clickPosition = event.clientX - rect.left;
+            const progressBarWidth = rect.width;
+            dom.audioPlayer.currentTime = (clickPosition / progressBarWidth) * dom.audioPlayer.duration;
+        });
+        dom.tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                dom.tabs.forEach(t => t.classList.remove('active'));
+                dom.tabContents.forEach(tc => tc.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
